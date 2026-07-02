@@ -28,19 +28,15 @@ import Capacitor
     @objc func showLeaderboard(_ call: CAPPluginCall, _ viewController: UIViewController) {
         let leaderboardID = String(call.getString("leaderboardID") ?? "") // Property to get the leaderboard ID
         DispatchQueue.main.async {
-            let leaderboardViewController = GKGameCenterViewController()
-            leaderboardViewController.viewState = .leaderboards
-            leaderboardViewController.leaderboardIdentifier = leaderboardID
+            let leaderboardViewController = GKGameCenterViewController(leaderboardID: leaderboardID, playerScope: .global, timeScope: .allTime)
             leaderboardViewController.gameCenterDelegate = self
-            leaderboardViewController.leaderboardTimeScope = .allTime
             viewController.present(leaderboardViewController, animated: true)
         }
     }
         
     @objc func showAllLeaderboards(_ call: CAPPluginCall, _ viewController: UIViewController) {
         DispatchQueue.main.async {
-            let leaderboardViewController = GKGameCenterViewController()
-            leaderboardViewController.viewState = .leaderboards
+            let leaderboardViewController = GKGameCenterViewController(state: .leaderboards)
             leaderboardViewController.gameCenterDelegate = self
             viewController.present(leaderboardViewController, animated: true)
         }
@@ -55,44 +51,35 @@ import Capacitor
         
         print("[GameServices] Showing Achievements")
         DispatchQueue.main.async {
-            let achievementsViewController = GKGameCenterViewController()
+            let achievementsViewController = GKGameCenterViewController(state: .achievements)
             achievementsViewController.gameCenterDelegate = self
-            achievementsViewController.viewState = .achievements
             viewController.present(achievementsViewController, animated: true)
         }
     }
     
     @objc func submitScore(_ call: CAPPluginCall) {
         let leaderboardID = String(call.getString("leaderboardID") ?? "") // Property to get the leaderboard ID
-        let score = Int64(call.getInt("totalScoreAmount") ?? 0) // Property to get the total score to submit
-        
+        let score = call.getInt("totalScoreAmount") ?? 0 // Property to get the total score to submit
+
         guard GKLocalPlayer.local.isAuthenticated else {
             print("Player is not authenticated")
             call.reject("Player is not authenticated")
             return
         }
-        
-        let scoreReporter = GKScore(leaderboardIdentifier: leaderboardID)
-        scoreReporter.value = Int64(score)
-        scoreReporter.context = 0
-        
-        let scoreArray: [GKScore] = [scoreReporter]
-        
-        GKScore.report(scoreArray, withCompletionHandler: { error in
+
+        GKLeaderboard.submitScore(score, context: 0, player: GKLocalPlayer.local, leaderboardIDs: [leaderboardID]) { error in
             if let error = error {
-                // Handle score submission error
                 print("Score submission failed with error: \(error.localizedDescription)")
                 call.reject("Score submission failed, try again.")
             } else {
                 let result = [
-                    "type": "sucess",
+                    "type": "success",
                     "message": "Score has been submitted successfully"
                 ]
-                // Score submitted successfully
                 print("Score submitted")
                 call.resolve(result as PluginCallResultData)
             }
-        })
+        }
     }
     
     @objc func unlockAchievement(_ call: CAPPluginCall) {
@@ -143,33 +130,28 @@ import Capacitor
             call.reject("Player is not authenticated")
             return
         }
-        
+
         let leaderboardID = String(call.getString("leaderboardID") ?? "") // * Property to get the leaderboard ID
-        let leaderboard = GKLeaderboard() // * LeaderBoard functions
-        var userTotalScore = 0 // * Property to store user total score
-        leaderboard.identifier = leaderboardID // * LeaderBoard we are going to use for
-        leaderboard.playerScope = .global // * Section to use
-        leaderboard.timeScope = .allTime // * Time to search for
-        
-        leaderboard.loadScores { (scores, error) in
-            let hasScore = scores ?? nil
-            if hasScore != nil {
+
+        GKLeaderboard.loadLeaderboards(IDs: [leaderboardID]) { leaderboards, error in
+            if let error = error {
+                call.reject("Error loading leaderboard: \(error.localizedDescription)")
+                return
+            }
+            guard let leaderboard = leaderboards?.first else {
+                call.resolve(["player_score": 0])
+                return
+            }
+            leaderboard.loadEntries(for: .global, timeScope: .allTime, range: NSRange(location: 1, length: 1)) { localPlayerEntry, _, _, error in
                 if let error = error {
                     call.reject("Error loading leaderboard score: \(error.localizedDescription)")
-                } else if let scores = scores {
-                    for score in scores {
-                        if score.player.gamePlayerID == GKLocalPlayer.local.gamePlayerID {
-                            userTotalScore = Int(score.value)
-                        }
-                    }
+                    return
                 }
-            } else {
-                userTotalScore = 0
+                let result = [
+                    "player_score": localPlayerEntry?.score ?? 0
+                ]
+                call.resolve(result as PluginCallResultData)
             }
-            let result = [
-                "player_score": userTotalScore
-            ]
-            call.resolve(result as PluginCallResultData)
         }
     }
 }
