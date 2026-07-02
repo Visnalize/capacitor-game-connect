@@ -3,16 +3,20 @@
 </p>
 <p align="center">
   <a href="http://www.openforge.io/">Official Website</a> |
-  <a href="https://www.youtube.com/@OpenForge/videos">Subscribe to Youtube Channel</a> 
+  <a href="https://www.youtube.com/@OpenForge/videos">Subscribe to Youtube Channel</a>
 </p>
 
 # Introduction
+
 Capacitor plugin for connecting and using services by Apple Game Center and Google Play Game Services. Features included are access to Sign-In, Leaderboard, and Achievements.
 
 ---
 
 | Capacitor Version | Support Status |
 | -----------    | :----:   |
+| Capacitor v8   | ✅       |
+| Capacitor v7   | ❌       |
+| Capacitor v6   | ❌       |
 | Capacitor v5   | ✅       |
 | Capacitor v4   | ✅       |
 | Capacitor v3   | ✅       |
@@ -135,7 +139,7 @@ Before use the `Achievement Methods` of the plugin, you need to setup your Achie
 1. Click on Target App in xcode
 2. Add team to Signing and Capabilities
 3. Add Game Center Capability
-4. Go to your Apps in https://appstoreconnect.apple.com/ and add your application
+4. Go to your Apps in <https://appstoreconnect.apple.com/> and add your application
 5. Scroll down in your App Store tab from your application view and check the Game Center field
 6. Go to Services tab and configure both Leaderboards and Achievements
 7. Go back to App Store tab and select you Leaderboards and Achievements configurations
@@ -285,5 +289,6 @@ getUserTotalScore(options: { leaderboardID: string; }) => Promise<PlayerScore>
 # Testing Limitations
 
 ### Android
+
 In order to test the functionality, you must have a physical Android device. Trying to connect to Google Play Services through Android Studio Emulator/Simulator will not work.
 Note: Certain functionality may require having to sign your APK when building to your device.
